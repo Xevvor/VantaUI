@@ -18,7 +18,7 @@ local Window = Vanta:CreateWindow({Title="Project", Author="Developer", Theme="D
 | ToggleKey | Enum.KeyCode | K |
 | SideBarWidth | number | 190 |
 
-One window per instance. For additional windows use `Vanta.new():CreateWindow(options)`. Destroyed instances cannot be reused. Prefer offset-based sizes for collapse behavior.
+One window per instance. For additional windows use `Vanta.new():CreateWindow(options)`. Destroyed instances cannot be reused. Sizes are fitted to the safe viewport. Smaller viewports reduce window dimensions first; below the 560 × 360 logical layout minimum, the library scales the window to fit. Dragging and resizing stay within viewport bounds. Scale-based input sizes are resolved when fitting the viewport.
 
 | Method | Behavior |
 |---|---|
@@ -29,7 +29,7 @@ One window per instance. For additional windows use `Vanta.new():CreateWindow(op
 | Collapse() | Toggle title-bar-only mode |
 | Notify(options) | Show notification |
 | OnDestroy(callback) | Register one cleanup callback (replaces previous) |
-| Destroy() | Disconnect library global listeners and animate removal |
+| Destroy() | Disconnect library global listeners, cancel pending UI tasks, call application cleanup once, and animate removal |
 
 `Vanta:Notify(options)` and `Vanta:SetTheme(name)` target the default instance.
 
@@ -39,6 +39,7 @@ Window:OnDestroy(function() print("Clean up application tasks here") end)
 ```
 
 Notification Title and Content are strings; Duration is optional seconds (3 by default).
+Notifications are queued FIFO per window. One message is visible at a time; its duration starts when it appears. Pending messages are discarded during cleanup. Destroying the ScreenGui or root externally also performs cleanup and invokes OnDestroy once.
 
 ## Navigation
 
@@ -50,6 +51,8 @@ Tab:Section({Title="Controls"})
 ```
 
 `Window:Tab(options)` creates a tab in a default General group. Titles are strings; Icon is optional. The first tab is selected automatically. Navigation groups are not collapsible.
+
+`Tab:Clear()` removes the tab's controls and their global input listeners, while preserving the tab and its layout. It also cancels key capture belonging to a removed control. Use it when rebuilding dynamic lists; discard handles to removed controls.
 
 ## Components
 
@@ -82,7 +85,7 @@ Value is boolean, default false. Methods: GetValue(), SetValue(value, silent), S
 local S = Tab:Slider({Title="Amount", Step=5, Value={Min=0, Max=100, Default=25}, Callback=function(value) print(value) end})
 S:SetValue(50, true)
 ```
-Value table requires numeric Min and Max, Max > Min. Default defaults to Min and is clamped. Step defaults to 1 and must be positive. SetValue rounds relative to Min and clamps. Methods: GetValue(), SetValue(number, silent), SetDesc(text).
+Value table requires numeric Min and Max, Max > Min. Default defaults to Min. Step defaults to 1 and must be positive. Both the initial Default and SetValue round relative to Min and clamp to the range. Initial normalization does not invoke the callback. Methods: GetValue(), SetValue(number, silent), SetDesc(text).
 
 ### Input
 ```lua
@@ -97,7 +100,7 @@ local D = Tab:Dropdown({Title="Choice", Values={"A","B"}, Value="A", SearchBarEn
 D:Refresh({"C","D"})
 D:Select("C")
 ```
-Values is an array of strings (default empty); Value is optional initial selection; SearchBarEnabled defaults false. Methods: GetValue(), Select(value), SetValue(value), Refresh(values). Refresh clears selection without invoking callback. Select and SetValue invoke callback and do not validate membership. Single selection only; no Desc setter.
+Values is an array of strings (default empty); Value is optional initial selection; SearchBarEnabled defaults false. Methods: GetValue(), Select(value), SetValue(value), Refresh(values, silent). Refresh clears selection and invokes the callback with nil if a selection existed. Pass `true` as its second argument to suppress this callback. Select and SetValue invoke callback and do not validate membership. Single selection only; no Desc setter.
 
 ### Keybind
 ```lua
@@ -105,6 +108,7 @@ local K = Tab:Keybind({Title="Visibility key", Value="K", Callback=function(name
 K:SetValue("L")
 ```
 Value defaults to K. Callback receives key name when changed, not whenever the key is pressed. Methods: GetValue(), SetValue(keyName), SetDesc(text). SetValue invokes callback.
+While capturing, GetValue keeps returning the current key. Capturing a key suppresses window visibility shortcuts across instances of this library module. Escape cancels capture; starting another keybind capture cancels the previous one.
 
 ## Limitations
-No multi-select, per-control icons, custom transparency, or persistence. Fixed-height controls may clip long descriptions. Resize is mouse-oriented. Runtime behavior has not yet been verified in Studio.
+No multi-select, per-control icons, custom transparency, or persistence. Fixed-height controls may clip long descriptions. Resize is mouse-oriented. Very small viewports use scaling and still need real-device readability checks. Roblox rendering and real-device behavior remain unverified.

@@ -25,4 +25,14 @@ Tab:Button({Title = "Hello", Callback = function() print("Hello!") end})
 - [Changelog](CHANGELOG.md)
 
 ## Status
-Version 1.0 development snapshot; runtime verification pending. Private repository; no public redistribution license is granted by this package.
+Development snapshot with unreleased reliability fixes. The library and examples compile, and mocked input/lifecycle contract tests pass. Roblox rendering and real-device verification remain pending. Private repository; no public redistribution license is granted by this package.
+
+## Local checks
+
+With Python and a local [Luau CLI](https://github.com/luau-lang/luau) installed:
+
+```text
+python tests/run.py /path/to/luau
+```
+
+The tests simulate input, lifecycle, viewport calculations and notification timing; they do not render Roblox UI. Format Luau files with StyLua using the included `stylua.toml`.
